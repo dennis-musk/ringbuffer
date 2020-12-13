@@ -1,14 +1,10 @@
 #ifndef __RINGBUFFER_H
 #define	__RINGBUFFER_H
 
-#define min(x,y) ({ 			\
-		typeof(x) _x = (x);	\
-		typeof(y) _y = (y);	\
-		(void) (&_x == &_y);	\
-		_x < _y ? _x : _y; })
+#define min(x,y) ((x)<(y)?(x):(y))
 
 struct ringbuffer {
-	void *data;
+	char *data;
 	unsigned int size;
 	unsigned int read_pos;
 	unsigned int write_pos;
