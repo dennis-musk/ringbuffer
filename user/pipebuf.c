@@ -1,14 +1,15 @@
+// gcc -O6 -Wall -pedantic -Wextra ringbuffer.c pipebuf.c -o pipebuf -lpthread
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "ringbuffer.h"
 
-#define	  FIFO_SIZE	16
-
+int stop = 0;
 
 void * consumer_proc(void *arg)
 {
@@ -17,61 +18,45 @@ void * consumer_proc(void *arg)
 
 	cnt = 0;
 
-	while(1)
+	while(!stop || !ringbuffer_is_empty(ring_buf))
 	{
-		sleep(2);
-		printf("------------------------------------------\n");
-		printf("get data from ring buffer.\n");
-			
 		{
 			char i;
 			
 			if (ringbuffer_is_empty(ring_buf)) {
-				printf("buffer is empty !\n");
-				sleep(1);
+				usleep(1000);
 				continue;
 			}
 
-			if (cnt !=0 && !(cnt % 16))
-				printf("\n");
-
 			ringbuffer_get(ring_buf, &i, sizeof(i));
 
-			printf("data is: %d \n", i);
-
+			putchar(i);
+			fflush(stdout);
 			cnt++;
 		}
-
-
-		printf("ring buffer length: %u\n", ringbuffer_len(ring_buf));
-		printf("------------------------------------------\n");
 	}
+	return NULL;
 }
 
 void * producer_proc(void *arg)
 {
 	struct ringbuffer *ring_buf = (struct ringbuffer *)arg;
-	char i;
+	int i;
 
-	i = 0;
 	while(1)
 	{
-		printf("******************************************\n");
-		printf("put datas to ring buffer.\n");
-		
-
 		if (ringbuffer_is_full(ring_buf)) {
-			printf("buffer is full !\n");
-			sleep(1);
+			usleep(1000);
 			continue;
 		}
-		ringbuffer_put(ring_buf, &i, sizeof(i));
-		i++;
+		i = getchar();
+		if (i == EOF)
+			break;
 
-		printf("ring buffer length: %u\n", ringbuffer_len(ring_buf));
-		printf("******************************************\n");
-		sleep(1);
+		ringbuffer_put(ring_buf, (char*)&i, 1);
 	}
+	stop = 1;
+	return NULL;
 }
 
 
@@ -104,18 +89,26 @@ int producer_thread(void *arg)
 
 
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	struct ringbuffer *ring_buf;
 	pthread_t produce_pid, consume_pid; 
+	unsigned int size; // maximal power of 2 is 2G
 
-	ring_buf = ringbuffer_create(FIFO_SIZE);
+	assert(argc == 2);
+	assert(strlen(argv[1])>0);
+	size = atoi(argv[1]);
+	switch (argv[1][strlen(argv[1])-1])
+	{
+		case 'G': size *= 0x04000000; break;
+		case 'M': size *= 0x00010000; break;
+		case 'K': size *= 0x00000400; break;
+	}
+	ring_buf = ringbuffer_create(size);
 	if (!ring_buf) {
 		perror("ringbuffer_create()");
 		exit(1);
 	}
-
-	printf("multi thread test.......\n");
 
 	produce_pid  = producer_thread((void*)ring_buf);
 	consume_pid  = consumer_thread((void*)ring_buf);
