@@ -107,7 +107,8 @@ unsigned int ringbuffer_put(struct ringbuffer *ring_buf,
  *  @ring_buf: the ringbuffer to be used.
  *  @cnt : the number byte to be print.
  */
-void ringbuffer_print(struct ringbuffer *ring_buf, unsigned int cnt)
+void ringbuffer_print(__attribute__((unused)) struct ringbuffer *ring_buf,
+                      __attribute__((unused)) unsigned int cnt)
 {
 	return;
 }
@@ -120,7 +121,7 @@ void ringbuffer_print(struct ringbuffer *ring_buf, unsigned int cnt)
  */
 ssize_t ringbuffer_from_dev(int fd, struct ringbuffer *ring_buf, unsigned int len)
 {
-	unsigned int l;   
+	int l;   
 	ssize_t ret, total;
 
 	total = 0;
@@ -193,7 +194,7 @@ unsigned int ringbuffer_get(struct ringbuffer *ring_buf,
 unsigned int ringbuffer_to_socket(int socket_fd, struct ringbuffer *ring_buf, unsigned int len)
 {
 	unsigned int l;
-	unsigned int send_num;
+	int send_num;
 
 	len = min(len, ring_buf->write_pos - ring_buf->read_pos);
 
